@@ -13,6 +13,25 @@ if SPEC is None or SPEC.loader is None:
 imagecontext = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(imagecontext)
 
+TEST_WORKER_RELEASE_V1 = (
+    "https://github.com/Azure/"
+    "azure-functions-python-worker/releases/download/"
+    "test-release-1/azure-functions-python-worker-py315-linux-x64.tar.gz"
+)
+TEST_WORKER_RELEASE_V2 = (
+    "https://github.com/Azure/"
+    "azure-functions-python-worker/releases/download/"
+    "test-release-2/azure-functions-python-worker-py315-linux-x64.tar.gz"
+)
+
+
+def resolve_test_worker_v1(_):
+    return TEST_WORKER_RELEASE_V1
+
+
+def resolve_test_worker_v2(_):
+    return TEST_WORKER_RELEASE_V2
+
 
 class ImageContextTests(unittest.TestCase):
     def _create_repository(self, root: Path) -> None:
@@ -35,11 +54,7 @@ class ImageContextTests(unittest.TestCase):
                 context_hash = imagecontext.prepare_image_context(
                     repository,
                     destination,
-                    worker_url_resolver=lambda _: (
-                        "https://github.com/Azure/"
-                        "azure-functions-python-worker/releases/download/"
-                        "4.47.1/worker.tar.gz"
-                    ),
+                    worker_url_resolver=resolve_test_worker_v1,
                 )
 
                 self.assertRegex(context_hash, r"^[0-9a-f]{64}$")
@@ -52,11 +67,7 @@ class ImageContextTests(unittest.TestCase):
                     (
                         destination / imagecontext.WORKER_RELEASE_FILE
                     ).read_text(encoding="utf-8").strip(),
-                    (
-                        "https://github.com/Azure/"
-                        "azure-functions-python-worker/releases/download/"
-                        "4.47.1/worker.tar.gz"
-                    ),
+                    TEST_WORKER_RELEASE_V1,
                 )
 
     def test_hash_changes_only_when_image_inputs_change(self):
@@ -68,11 +79,7 @@ class ImageContextTests(unittest.TestCase):
                 first_hash = imagecontext.prepare_image_context(
                     repository,
                     Path(first_dir),
-                    worker_url_resolver=lambda _: (
-                        "https://github.com/Azure/"
-                        "azure-functions-python-worker/releases/download/"
-                        "4.47.1/worker.tar.gz"
-                    ),
+                    worker_url_resolver=resolve_test_worker_v1,
                 )
 
             (repository / "README.md").write_text(
@@ -83,11 +90,7 @@ class ImageContextTests(unittest.TestCase):
                 second_hash = imagecontext.prepare_image_context(
                     repository,
                     Path(second_dir),
-                    worker_url_resolver=lambda _: (
-                        "https://github.com/Azure/"
-                        "azure-functions-python-worker/releases/download/"
-                        "4.47.1/worker.tar.gz"
-                    ),
+                    worker_url_resolver=resolve_test_worker_v1,
                 )
             self.assertEqual(first_hash, second_hash)
 
@@ -99,11 +102,7 @@ class ImageContextTests(unittest.TestCase):
                 third_hash = imagecontext.prepare_image_context(
                     repository,
                     Path(third_dir),
-                    worker_url_resolver=lambda _: (
-                        "https://github.com/Azure/"
-                        "azure-functions-python-worker/releases/download/"
-                        "4.47.1/worker.tar.gz"
-                    ),
+                    worker_url_resolver=resolve_test_worker_v1,
                 )
             self.assertNotEqual(first_hash, third_hash)
 
@@ -116,21 +115,13 @@ class ImageContextTests(unittest.TestCase):
                 first_hash = imagecontext.prepare_image_context(
                     repository,
                     Path(first_dir),
-                    worker_url_resolver=lambda _: (
-                        "https://github.com/Azure/"
-                        "azure-functions-python-worker/releases/download/"
-                        "4.47.1/worker.tar.gz"
-                    ),
+                    worker_url_resolver=resolve_test_worker_v1,
                 )
             with tempfile.TemporaryDirectory() as second_dir:
                 second_hash = imagecontext.prepare_image_context(
                     repository,
                     Path(second_dir),
-                    worker_url_resolver=lambda _: (
-                        "https://github.com/Azure/"
-                        "azure-functions-python-worker/releases/download/"
-                        "4.48.0/worker.tar.gz"
-                    ),
+                    worker_url_resolver=resolve_test_worker_v2,
                 )
 
             self.assertNotEqual(first_hash, second_hash)
