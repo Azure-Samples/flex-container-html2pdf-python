@@ -1,0 +1,11 @@
+.git/
+.github/
+.azure/
+infra/
+tests/
+azure.yaml
+Dockerfile
+LICENSE.md
+README.md
+local.settings.json
+sample.html
