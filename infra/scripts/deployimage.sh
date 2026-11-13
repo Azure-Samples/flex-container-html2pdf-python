@@ -108,6 +108,8 @@ if ! printf '%s' "$CONTEXT_HASH" | grep -Eq '^[0-9a-f]{64}$'; then
     echo "Image-context hash is invalid: '$CONTEXT_HASH'." >&2
     exit 1
 fi
+WORKER_RELEASE_URL=$(cat "$BUILD_CONTEXT/worker-release-url.txt")
+echo "Resolved Python worker: $WORKER_RELEASE_URL"
 
 IMAGE_TAG="azd-$CONTEXT_HASH"
 TAGGED_IMAGE="$AZURE_IMAGE_REPOSITORY:$IMAGE_TAG"

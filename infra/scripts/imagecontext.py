@@ -5,8 +5,12 @@ from pathlib import Path
 import shutil
 import stat
 import sys
+from urllib.error import HTTPError
+from urllib.parse import urlparse
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 
+WORKER_RELEASE_FILE = "worker-release-url.txt"
 IMAGE_INPUTS = (
     ".dockerignore",
     "Dockerfile",
@@ -14,7 +18,55 @@ IMAGE_INPUTS = (
     "host.json",
     "render_pdf_worker.py",
     "requirements.txt",
+    WORKER_RELEASE_FILE,
 )
+
+
+class _NoRedirectHandler(HTTPRedirectHandler):
+    def redirect_request(
+        self,
+        request,
+        file_pointer,
+        code,
+        message,
+        headers,
+        new_url,
+    ):
+        return None
+
+
+def resolve_worker_release_url(url: str) -> str:
+    request = Request(
+        url,
+        headers={"User-Agent": "flex-container-image-context"},
+        method="HEAD",
+    )
+    try:
+        with build_opener(_NoRedirectHandler).open(
+            request,
+            timeout=30,
+        ) as response:
+            location = response.headers.get("Location")
+    except HTTPError as error:
+        if error.code not in {301, 302, 303, 307, 308}:
+            raise
+        location = error.headers.get("Location")
+
+    if not location:
+        raise ValueError("The worker release URL did not return a redirect.")
+
+    parsed = urlparse(location)
+    if (
+        parsed.scheme != "https"
+        or parsed.netloc != "github.com"
+        or not parsed.path.startswith(
+            "/Azure/azure-functions-python-worker/releases/download/"
+        )
+    ):
+        raise ValueError(
+            f"Unexpected worker release redirect target: {location}"
+        )
+    return location
 
 
 def _copy_entry(source: Path, destination: Path) -> None:
@@ -62,6 +114,7 @@ def hash_image_context(context_root: Path) -> str:
 def prepare_image_context(
     repository_root: Path,
     destination_root: Path,
+    worker_url_resolver=resolve_worker_release_url,
 ) -> str:
     repository = repository_root.resolve()
     destination = destination_root.resolve()
@@ -75,7 +128,22 @@ def prepare_image_context(
         source = repository / input_name
         if not source.exists():
             raise FileNotFoundError(f"Required image input is missing: {source}")
-        _copy_entry(source, destination / input_name)
+        destination_path = destination / input_name
+        if input_name == WORKER_RELEASE_FILE:
+            floating_url = source.read_text(encoding="utf-8").strip()
+            resolved_url = worker_url_resolver(floating_url)
+            destination_path.write_text(
+                f"{resolved_url}\n",
+                encoding="utf-8",
+            )
+            destination_path.chmod(
+                stat.S_IRUSR
+                | stat.S_IWUSR
+                | stat.S_IRGRP
+                | stat.S_IROTH
+            )
+        else:
+            _copy_entry(source, destination_path)
 
     return hash_image_context(destination)
 

@@ -1,13 +1,9 @@
 ARG PYTHON_BASE=python:3.15-slim-bookworm
 FROM ${PYTHON_BASE} AS build
 
-ARG WORKER_PYTHON=315
-ARG WORKER_SHA256=ae40f55204cdf7b278aa80df4be03ab7fd5432de6726b250ad9b243e4725a5de
-ADD https://github.com/Azure/azure-functions-python-worker/releases/download/azure_functions_worker-4.46.7/azure-functions-python-worker-4.46.7-py${WORKER_PYTHON}-linux-x64.tar.gz \
-    /tmp/worker.tar.gz
+COPY worker-release-url.txt /tmp/worker-release-url.txt
 
-RUN printf '%s  %s\n' "${WORKER_SHA256}" /tmp/worker.tar.gz \
-        | sha256sum -c - \
+RUN python -c "from pathlib import Path; from urllib.request import urlretrieve; url = Path('/tmp/worker-release-url.txt').read_text(encoding='utf-8').strip(); urlretrieve(url, '/tmp/worker.tar.gz')" \
     && mkdir -p /opt/functions-worker \
     && tar -xzf /tmp/worker.tar.gz -C /opt/functions-worker \
     && rm /tmp/worker.tar.gz
@@ -42,6 +38,7 @@ RUN apt-get update \
 
 WORKDIR /home/site/wwwroot
 COPY --from=build /opt/functions-worker/ /opt/functions-worker/
+COPY --from=build /tmp/worker-release-url.txt /opt/functions-worker-release-url.txt
 COPY --from=build /home/site/wwwroot/.python_packages/ ./.python_packages/
 COPY function_app.py render_pdf_worker.py host.json ./
 

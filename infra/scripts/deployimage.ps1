@@ -73,6 +73,10 @@ try {
     if ($contextHash -notmatch '^[0-9a-f]{64}$') {
         throw "Image-context hash is invalid: '$contextHash'."
     }
+    $workerReleaseUrl = (
+        Get-Content -Raw (Join-Path $buildContext 'worker-release-url.txt')
+    ).Trim()
+    Write-Host "Resolved Python worker: $workerReleaseUrl"
 
     $imageTag = "azd-$contextHash"
     $taggedImage = "$imageRepository`:$imageTag"

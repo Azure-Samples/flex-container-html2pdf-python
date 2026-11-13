@@ -84,9 +84,10 @@ The function:
 1. validates the generated PDF and its 8 MiB output limit;
 1. returns `application/pdf` as `document.pdf`.
 
-Exact runtime and dependency pins live in the
-[`Dockerfile`](./Dockerfile) and [`requirements.txt`](./requirements.txt),
-which are the source of truth for version updates.
+Application dependency pins live in
+[`requirements.txt`](./requirements.txt). The worker source is declared in
+[`worker-release-url.txt`](./worker-release-url.txt), which points to the
+official latest Python 3.15 Linux x64 worker.
 
 ## How the container image is built
 
@@ -97,8 +98,10 @@ deploy the sample.
 
 During `azd up`:
 
-1. [`imagecontext.py`](./infra/scripts/imagecontext.py) stages only files that
-   affect the image and calculates a deterministic SHA-256.
+1. [`imagecontext.py`](./infra/scripts/imagecontext.py) resolves the floating
+   worker link to its versioned GitHub release URL.
+1. It stages only files that affect the image and calculates a deterministic
+   SHA-256 that includes the resolved worker release.
 1. The hash becomes the image tag: `azd-<context-hash>`.
 1. An existing tag is reused; otherwise `az acr build` runs the ACR Tasks
    quick build.
@@ -106,6 +109,9 @@ During `azd up`:
 1. The Function App is pinned to
    `registry/repository:tag@sha256:digest`.
 1. The tag is write- and delete-locked so its digest can't move.
+
+When the official `latest` link advances to a new worker release, the resolved
+URL changes, producing a new context hash, image tag, and ACR Tasks build.
 
 ## Deploy to Azure
 

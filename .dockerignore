@@ -4,3 +4,4 @@
 !function_app.py
 !render_pdf_worker.py
 !host.json
+!worker-release-url.txt
