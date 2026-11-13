@@ -1,0 +1,1 @@
+https://aka.ms/azurefunctions/releases/python/3.15/worker/latest/azure-functions-python-worker-py315-linux-x64.tar.gz
