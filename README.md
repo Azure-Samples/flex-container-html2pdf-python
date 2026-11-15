@@ -113,28 +113,20 @@ During `azd up`:
 When the official `latest` link advances to a new worker release, the resolved
 URL changes, producing a new context hash, image tag, and ACR Tasks build.
 
-The Dockerfile downloads the canonical official Python 3.15 worker archive
-and its checksum sidecar from the same archive URL plus `.sha256`. During
-deployment, both downloads use the versioned URL resolved by `imagecontext.py`,
-so independent updates to floating links cannot select different releases.
+The Dockerfile downloads the official Python 3.15 worker archive directly from
+`https://aka.ms/azurefunctions/releases/python/3.15/worker/latest/azure-functions-python-worker-py315-linux-x64.tar.gz`
+and its checksum sidecar from the same URL plus `.sha256`.
+During deployment, `imagecontext.py` stages the resolved versioned URL in
+`worker-release-url.txt`. The Dockerfile also fetches that selected release's
+checksum sidecar and requires its bytes to match the checksum downloaded
+through `aka.ms`. If the floating links advance or disagree with the selected
+release, the build fails closed rather than building a different worker under
+the selected release's context hash. When building directly from a checkout,
+the extra checksum fetch uses the checkout's `aka.ms` worker URL.
 `sha256sum --check --strict` must succeed before the archive is extracted.
 This verifies archive integrity against the published checksum, not independent
 authenticity. The context hash identifies build inputs for provenance and cache
 reuse; it is not the worker archive checksum.
-
-### Container settings
-
-The image installs Chromium at `/usr/bin/chromium`, which is the renderer's
-default executable. `CHROMIUM_EXECUTABLE` is an optional environment override
-if Chromium is installed elsewhere. `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` and
-`PLAYWRIGHT_BROWSERS_PATH` are not required because the renderer uses
-OS-installed Chromium rather than Playwright-managed browsers.
-`PYTHONUNBUFFERED=1` is retained for prompt console logging, not as a BYOC
-requirement.
-
-The `PYTHON_BASE` and `PIP_INDEX_URL` build arguments are optional overrides.
-Any replacement base must remain compatible with the Python 3.15 Linux AMD64
-worker.
 
 ## Deploy to Azure
 
