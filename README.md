@@ -113,6 +113,29 @@ During `azd up`:
 When the official `latest` link advances to a new worker release, the resolved
 URL changes, producing a new context hash, image tag, and ACR Tasks build.
 
+The Dockerfile downloads the canonical official Python 3.15 worker archive
+and its checksum sidecar from the same archive URL plus `.sha256`. During
+deployment, both downloads use the versioned URL resolved by `imagecontext.py`,
+so independent updates to floating links cannot select different releases.
+`sha256sum --check --strict` must succeed before the archive is extracted.
+This verifies archive integrity against the published checksum, not independent
+authenticity. The context hash identifies build inputs for provenance and cache
+reuse; it is not the worker archive checksum.
+
+### Container settings
+
+The image installs Chromium at `/usr/bin/chromium`, which is the renderer's
+default executable. `CHROMIUM_EXECUTABLE` is an optional environment override
+if Chromium is installed elsewhere. `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` and
+`PLAYWRIGHT_BROWSERS_PATH` are not required because the renderer uses
+OS-installed Chromium rather than Playwright-managed browsers.
+`PYTHONUNBUFFERED=1` is retained for prompt console logging, not as a BYOC
+requirement.
+
+The `PYTHON_BASE` and `PIP_INDEX_URL` build arguments are optional overrides.
+Any replacement base must remain compatible with the Python 3.15 Linux AMD64
+worker.
+
 ## Deploy to Azure
 
 Sign in:
@@ -269,9 +292,14 @@ This sample:
 - passes registry and storage secrets only as secure deployment parameters;
 - doesn't write those secrets to source or `azd` environment outputs;
 - runs the application and Chromium as UID/GID `10001`;
-- keeps Chromium's sandbox enabled;
+- explicitly requests Chromium's sandbox with `chromium_sandbox=True`;
 - disables JavaScript and external subresources;
 - bounds input, output, concurrency, and execution time.
+
+Sandboxed Chromium requires compatible container platform support for its
+Linux sandbox mechanisms. Verify compatibility on the target platform before
+relying on this sample; compatibility is not guaranteed across environments.
+If sandboxed launch fails, do not disable the sandbox to render untrusted HTML.
 
 ## Preview limitations
 

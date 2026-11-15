@@ -27,6 +27,7 @@ def _render(html: str) -> bytes:
         browser = playwright.chromium.launch(
             executable_path=CHROMIUM_EXECUTABLE,
             headless=True,
+            chromium_sandbox=True,
             timeout=PLAYWRIGHT_TIMEOUT_MS,
         )
         try:
