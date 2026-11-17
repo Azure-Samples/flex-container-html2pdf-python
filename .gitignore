@@ -211,6 +211,12 @@ tempCodeRunnerFile.py
 # PyPI configuration file
 .pypirc
 
+# Azure Developer CLI and sample output
+.azure/
+local.settings.json
+*.pdf
+custom.html
+
 # Marimo
 marimo/_static/
 marimo/_lsp/
