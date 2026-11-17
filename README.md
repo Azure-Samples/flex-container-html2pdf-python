@@ -113,6 +113,21 @@ During `azd up`:
 When the official `latest` link advances to a new worker release, the resolved
 URL changes, producing a new context hash, image tag, and ACR Tasks build.
 
+The Dockerfile downloads the official Python 3.15 worker archive directly from
+`https://aka.ms/azurefunctions/releases/python/3.15/worker/latest/azure-functions-python-worker-py315-linux-x64.tar.gz`
+and its checksum sidecar from the same URL plus `.sha256`.
+During deployment, `imagecontext.py` stages the resolved versioned URL in
+`worker-release-url.txt`. The Dockerfile also fetches that selected release's
+checksum sidecar and requires its bytes to match the checksum downloaded
+through `aka.ms`. If the floating links advance or disagree with the selected
+release, the build fails closed rather than building a different worker under
+the selected release's context hash. When building directly from a checkout,
+the extra checksum fetch uses the checkout's `aka.ms` worker URL.
+`sha256sum --check --strict` must succeed before the archive is extracted.
+This verifies archive integrity against the published checksum, not independent
+authenticity. The context hash identifies build inputs for provenance and cache
+reuse; it is not the worker archive checksum.
+
 ## Deploy to Azure
 
 Sign in:
@@ -269,9 +284,14 @@ This sample:
 - passes registry and storage secrets only as secure deployment parameters;
 - doesn't write those secrets to source or `azd` environment outputs;
 - runs the application and Chromium as UID/GID `10001`;
-- keeps Chromium's sandbox enabled;
+- explicitly requests Chromium's sandbox with `chromium_sandbox=True`;
 - disables JavaScript and external subresources;
 - bounds input, output, concurrency, and execution time.
+
+Sandboxed Chromium requires compatible container platform support for its
+Linux sandbox mechanisms. Verify compatibility on the target platform before
+relying on this sample; compatibility is not guaranteed across environments.
+If sandboxed launch fails, do not disable the sandbox to render untrusted HTML.
 
 ## Preview limitations
 
